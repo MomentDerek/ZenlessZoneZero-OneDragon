@@ -1,8 +1,8 @@
 import os
-from PySide6.QtCore import Qt, QRect, QThread, Signal
-from PySide6.QtGui import QPixmap, QPainter, QPainterPath, QFont, QColor, QLinearGradient, QPen,QBrush
+from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtGui import QPixmap, QPainter, QPainterPath, QFont, QColor, QLinearGradient, QBrush
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QSpacerItem, QSizePolicy
-from qfluentwidgets import FluentIcon, InfoBar, InfoBarPosition
+from qfluentwidgets import FluentIcon, InfoBar, InfoBarPosition, Dialog
 
 from one_dragon.gui.component.interface.vertical_scroll_interface import VerticalScrollInterface
 from one_dragon.gui.component.link_card import LinkCardView
@@ -142,7 +142,6 @@ class BannerWidget(QWidget):
         painter.setPen(Qt.white)
         painter.drawText(small_text_rect, small_text)
 
-
         painter.end()
 
 
@@ -159,8 +158,9 @@ class CheckUpdateRunner(QThread):
         :return:
         """
         is_latest, msg = self.ctx.git_service.is_current_branch_latest()
-        if msg != '与远程分支不一致':
+        if msg not in ['与远程分支不一致', '获取远程代码失败']:
             self.need_update.emit(not is_latest)
+        # self.need_update.emit(True)  # 调试用
 
 
 class HomeInterface(VerticalScrollInterface):
@@ -205,3 +205,19 @@ class HomeInterface(VerticalScrollInterface):
             parent=self
         )
         w.setCustomBackgroundColor('white', '#202020')
+        if self.ctx.env_config.auto_update:
+            result, msg = self.ctx.git_service.fetch_latest_code()
+            # result = True  # 调试用
+            if result:
+                self._show_dialog_after_code_updated()
+
+    def _show_dialog_after_code_updated(self):
+        title = '更新提醒'
+        content = "代码已自动更新，是否重启?"
+        w = Dialog(title, content, self)
+        w.setTitleBarVisible(False)
+        w.yesButton.setText('重启')
+        w.cancelButton.setText('取消')
+        if w.exec():
+            from one_dragon.utils import app_utils
+            app_utils.start_one_dragon(restart=True)

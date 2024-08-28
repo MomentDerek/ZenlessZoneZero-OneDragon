@@ -5,9 +5,9 @@ area_list:
 - area_name: 刮刮卡
   pc_rect:
   - 94
-  - 996
+  - 956
   - 172
-  - 1020
+  - 1050
   text: 刮刮卡
   lcs_percent: 0.5
   template_sub_dir: ''
@@ -53,6 +53,39 @@ area_list:
   - 1134
   - 632
   text: ''
+  lcs_percent: 0.5
+  template_sub_dir: ''
+  template_id: ''
+  template_match_threshold: 0.7
+- area_name: 叫醒他
+  pc_rect:
+  - 1434
+  - 638
+  - 1620
+  - 694
+  text: 叫醒他
+  lcs_percent: 0.5
+  template_sub_dir: ''
+  template_id: ''
+  template_match_threshold: 0.7
+- area_name: 嗷呜被你叫醒了
+  pc_rect:
+  - 780
+  - 518
+  - 1138
+  - 586
+  text: 嗷呜被你叫醒了
+  lcs_percent: 0.5
+  template_sub_dir: ''
+  template_id: ''
+  template_match_threshold: 0.7
+- area_name: 嗷呜对话
+  pc_rect:
+  - 686
+  - 830
+  - 1272
+  - 1024
+  text: 嗷呜睡得很香甜要不要惊动它呢
   lcs_percent: 0.5
   template_sub_dir: ''
   template_id: ''

@@ -29,7 +29,7 @@ class CallForSupport(ZOperation):
 
     STATUS_ACCEPT: ClassVar[str] = '接应支援代理人'
     STATUS_NO_NEED: ClassVar[str] = '无需支援'
-    OPT_3: ClassVar[str] = '接替小组成员'
+    STATUS_REPLACE: ClassVar[str] = '接替小组成员'
 
     def __init__(self, ctx: ZContext):
         """
@@ -44,13 +44,14 @@ class CallForSupport(ZOperation):
         )
 
         self._handlers: List[EventOcrResultHandler] = [
-            EventOcrResultHandler(CallForSupport.STATUS_ACCEPT, method=self.check_team, lcs_percent=1),
-            EventOcrResultHandler(CallForSupport.OPT_3, self.check_team),
+            EventOcrResultHandler(CallForSupport.STATUS_ACCEPT, method=self.check_team),
+            EventOcrResultHandler(CallForSupport.STATUS_REPLACE, method=self.check_team),
             EventOcrResultHandler(event_name, is_event_mark=True)
         ]
 
     def handle_init(self):
         self.should_call_pos: int = 0  # 呼叫支援的位置
+        self.new_agent: Optional[Agent] = None  # 本次加入的代理人
 
     @operation_node(name='画面识别', is_start_node=True)
     def check_screen(self) -> OperationRoundResult:
@@ -67,10 +68,10 @@ class CallForSupport(ZOperation):
         if agent_list is None:
             return self.round_retry('无法识别当前角色列表', wait=1)
 
-        agent = self._get_support_agent(screen)
-        if agent is None:
+        self.new_agent = self._get_support_agent(screen)
+        if self.new_agent is None:
             log.error('无法识别当前增援角色')
-        self.should_call_pos = self._should_call_backup(agent_list, agent)
+        self.should_call_pos = self._should_call_backup(agent_list, self.new_agent)
 
         if self.should_call_pos is not None:
             return self.round_success(CallForSupport.STATUS_ACCEPT)
@@ -134,10 +135,12 @@ class CallForSupport(ZOperation):
         area = event_utils.get_event_text_area(self)
         result = self.round_by_ocr_and_click(screen, CallForSupport.STATUS_ACCEPT, area=area)
         if result.is_success:
+            self.replace = False
             return self.round_success(wait=2)
 
         result = self.round_by_ocr_and_click(screen, '接替小队成员', area=area, lcs_percent=0.8)
         if result.is_success:
+            self.replace = True
             return self.round_success(wait=2)
 
         return self.round_retry(wait=1)
@@ -147,13 +150,17 @@ class CallForSupport(ZOperation):
     def choose_pos(self) -> OperationRoundResult:
         screen = self.screenshot()
         area = event_utils.get_event_text_area(self)
-        cn = '%d号位' % self.should_call_pos
+        if self.replace:
+            cn = '接替%d号队员的位置' % self.should_call_pos
+        else:
+            cn = '%d号位' % self.should_call_pos
         return self.round_by_ocr_and_click(screen, cn, area=area, lcs_percent=1,
                                            success_wait=2, retry_wait=1)
 
     @node_from(from_name='选择位置')
     @operation_node(name='确认')
     def confirm(self) -> OperationRoundResult:
+        self.ctx.hollow.update_agent_list_after_support(self.new_agent, self.should_call_pos)
         return event_utils.click_empty(self)
 
     @node_from(from_name='画面识别', status=STATUS_NO_NEED)
@@ -177,6 +184,7 @@ class CallForSupport(ZOperation):
             RejectOption('谢谢可琳这次不用'),  # 可琳
             RejectOption('星徽骑士再见'),  # 比利
             RejectOption('还不用请出白祇重工'),  # 珂蕾妲
+            RejectOption('杀以骸焉用艾莲'),  # 艾莲
         ]
 
         part = cv2_utils.crop_image_only(screen, area.rect)
@@ -212,11 +220,46 @@ def __debug_support_agent():
     ctx.init_by_config()
     ctx.ocr.init_model()
     op = CallForSupport(ctx)
-    from one_dragon.utils import debug_utils
-    screen = debug_utils.get_debug_image('IMG_0002')
+    from one_dragon.utils import os_utils
+    import os
+    screen = cv2_utils.read_image(os.path.join(
+        os_utils.get_path_under_work_dir('.debug', 'devtools', 'screen', 'hollow_zero_support'),
+        'laikaen.png'
+    ))
     print(op._get_support_agent(screen).agent_name)
+
+
+def __debug_current_agent():
+    ctx = ZContext()
+    ctx.init_by_config()
+    ctx.ocr.init_model()
+    op = CallForSupport(ctx)
+    from one_dragon.utils import os_utils
+    import os
+    screen = cv2_utils.read_image(os.path.join(
+        os_utils.get_path_under_work_dir('.debug', 'devtools', 'screen', 'hollow_zero_support'),
+        'laikaen.png'
+    ))
+    agent_list = ctx.hollow.check_agent_list(screen)
+    print([i.agent_name for i in agent_list if i is not None])
+
+
+def __debug_check_screen():
+    ctx = ZContext()
+    ctx.init_by_config()
+    ctx.ocr.init_model()
+    op = CallForSupport(ctx)
+    from one_dragon.utils import os_utils
+    import os
+    screen = cv2_utils.read_image(os.path.join(
+        os_utils.get_path_under_work_dir('.debug', 'devtools', 'screen', 'hollow_zero_support'),
+        'ailian.png'
+    ))
+    event_utils.check_event_text_and_run(op, screen, op._handlers)
 
 
 if __name__ == '__main__':
     # __debug()
-    __debug_support_agent()
+    # __debug_support_agent()
+    # __debug_current_agent()
+    __debug_check_screen()

@@ -1,11 +1,15 @@
+import time
+
 from typing import ClassVar
 
 from one_dragon.base.operation.operation_edge import node_from
 from one_dragon.base.operation.operation_node import operation_node
 from one_dragon.base.operation.operation_round_result import OperationRoundResult
 from one_dragon.utils.i18_utils import gt
+from zzz_od.application.hollow_zero.hollow_zero_config import HollowZeroExtraTask
 from zzz_od.application.zzz_application import ZApplication
 from zzz_od.context.zzz_context import ZContext
+from zzz_od.operation.back_to_normal_world import BackToNormalWorld
 from zzz_od.operation.compendium.tp_by_compendium import TransportByCompendium
 from zzz_od.operation.hollow_zero.hollow_runner import HollowRunner
 
@@ -30,7 +34,7 @@ class HollowZeroApp(ZApplication):
         mission_name = self.ctx.hollow_zero_config.mission_name
         idx = mission_name.find('-')
         if idx != -1:
-            self.mission_name = mission_name[idx+1:]
+            self.mission_name = mission_name
             self.mission_type_name = mission_name[:idx]
         else:
             self.mission_name = mission_name
@@ -57,7 +61,8 @@ class HollowZeroApp(ZApplication):
     @operation_node(name='选择副本类型')
     def choose_mission_type(self) -> OperationRoundResult:
         self.node_max_retry_times = 5
-        if self.ctx.hollow_zero_record.is_finished_by_times():
+        if (self.ctx.hollow_zero_record.is_finished_by_times()
+                and self.ctx.hollow_zero_config.extra_task == HollowZeroExtraTask.NONE.value.value):
             return self.round_success(HollowZeroApp.STATUS_TIMES_FINISHED)
         screen = self.screenshot()
         return self.round_by_ocr_and_click(screen, self.mission_type_name,
@@ -110,9 +115,51 @@ class HollowZeroApp(ZApplication):
         return self.round_by_op(op.execute())
 
     @node_from(from_name='选择副本类型', status=STATUS_TIMES_FINISHED)
-    @operation_node(name='完成后')
-    def back(self) -> OperationRoundResult:
-        return self.round_success()
+    @operation_node(name='完成后等待加载')
+    def wait_back_loading(self) -> OperationRoundResult:
+        self.node_max_retry_times = 20  # 等待加载久一点
+        screen = self.screenshot()
+
+        return self.round_by_find_area(screen, '零号空洞-入口', '街区', retry_wait=1)
+
+    @node_from(from_name='完成后等待加载')
+    @operation_node(name='点击奖励入口')
+    def click_reward_entry(self) -> OperationRoundResult:
+        self.node_max_retry_times = 5
+
+        return self.round_by_click_area('零号空洞-入口', '奖励入口', success_wait=1)
+
+    @node_from(from_name='点击奖励入口')
+    @operation_node(name='悬赏委托')
+    def click_task(self) -> OperationRoundResult:
+        self.node_max_retry_times = 5
+        screen = self.screenshot()
+
+        return self.round_by_find_and_click_area(screen, '零号空洞-入口', '悬赏委托',
+                                                 success_wait=1, retry_wait=1)
+
+    @node_from(from_name='悬赏委托')
+    @operation_node(name='领取奖励')
+    def claim_reward(self) -> OperationRoundResult:
+        self.node_max_retry_times = 3
+        screen = self.screenshot()
+        area = self.ctx.screen_loader.get_area('零号空洞-入口', '领取')
+
+        result = self.round_by_ocr_and_click(screen, '领取', area=area,
+                                             color_range=[(100, 100, 0), (255, 255, 20)])
+        if result.is_success:
+            time.sleep(1.5)
+            self.round_by_click_area('菜单', '返回')
+            return self.round_wait(wait=1)
+
+        return self.round_retry(result.status, wait=1)
+
+    @node_from(from_name='领取奖励')
+    @node_from(from_name='领取奖励', success=False)
+    @operation_node(name='完成')
+    def finish(self) -> OperationRoundResult:
+        op = BackToNormalWorld(self.ctx)
+        return self.round_by_op(op.execute())
 
 
 def __debug():

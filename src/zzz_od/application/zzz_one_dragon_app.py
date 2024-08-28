@@ -1,5 +1,7 @@
 from one_dragon.base.operation.one_dragon_app import OneDragonApp
 from zzz_od.application.charge_plan.charge_plan_app import ChargePlanApp
+from zzz_od.application.city_fund.city_fund_app import CityFundApp
+from zzz_od.application.coffee.coffee_app import CoffeeApp
 from zzz_od.application.email.email_app import EmailApp
 from zzz_od.application.engagement_reward.engagement_reward_app import EngagementRewardApp
 from zzz_od.application.notorious_hunt.notorious_hunt_app import NotoriousHuntApp
@@ -19,9 +21,11 @@ class ZOneDragonApp(OneDragonApp, ZApplication):
             EmailApp(self.ctx),
             RandomPlayApp(self.ctx),
             ScratchCardApp(self.ctx),
+            CoffeeApp(self.ctx),
             ChargePlanApp(self.ctx),
             NotoriousHuntApp(self.ctx),
             EngagementRewardApp(self.ctx),
+            CityFundApp(self.ctx),
         ]
 
         OneDragonApp.__init__(self, ctx, app_id, app_list)

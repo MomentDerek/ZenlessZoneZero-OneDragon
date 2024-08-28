@@ -79,7 +79,7 @@
 # 妮可
 - entry_name: "邂逅"
   event_name: "狡兔的逆鳞"
-  lcs_percent: 0.8
+  lcs_percent: 0.6
   options:
     - option_name: "为妮可打灯照明"
 
@@ -128,3 +128,21 @@
     - option_name: "我很期待"
       desc: "清除1个侵蚀症状，或降低50点压力值"
     - option_name: "还是算了"
+
+- entry_name: "邂逅"
+  event_name: "桌面礼仪"
+  options:
+    - option_name: "那就拜托你了"
+
+# 青衣
+- entry_name: "邂逅"
+  event_name: "提醒喝水小助手"
+  options:
+    - option_name: "里面装了什么好喝的"
+    - option_name: "我我记住了马马上会去喝的"
+
+# 猫又
+- entry_name: "邂逅"
+  event_name: "捕猎游戏高分段位"
+  options:
+    - option_name: "等待猫又吧已经习惯了"
